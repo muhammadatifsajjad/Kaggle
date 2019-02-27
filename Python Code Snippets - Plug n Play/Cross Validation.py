@@ -50,7 +50,6 @@ if ml_algorithm == 'XGBoost':
                'objective': 'reg:linear', 'eval_metric': 'rmse'}
                 # 'objective': 'binary:logistic', 'eval_metric': 'auc'
 # LightGBM
-# Remove 'feval' parameter from LightGBM train method if custom evaluation function is not used
 elif ml_algorithm == 'LightGBM': 
 	num_rounds = 10
 	params = {'learning_rate': 0.01, 'max_depth': 13, 'colsample_bytree': 0.2, 
