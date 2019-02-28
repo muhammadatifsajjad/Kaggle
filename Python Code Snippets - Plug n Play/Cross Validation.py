@@ -10,10 +10,14 @@ from sklearn.linear_model import Ridge, Lasso
 # FastRGFRegressor, Ridge Regression, or Lasso Regression algorithm as specified
 # Provides three methods to create train/validation splits
 # 		Method 1: Time based splits - Create splits manually based on a date column
-# 		Method 2: K-fold cross validation with data shuffled only once at the start. 
-#                 Each test sets do not overlap. Most commonly used method
-# 		Method 3: K-fold cross validation with data shuffled before each split. 
-#                 Test sets may overlap between the splits
+# 		Method 2: K-fold cross validation. Does not preserves class balance
+#           	  Can be used for both classification and regression
+# 		Method 3: K-fold cross validation with data shuffled only once at the start
+# 				  Each test sets do not overlap. Preserves class balance
+#           	  Can be used for classification only
+# 		Method 4: K-fold cross validation with data shuffled before each split
+# 				  Test sets may overlap between the splits. Preserves class balance
+#           	  Can be used for classification only
 
 # -----------------------------------------------------------------------------
 # 						   STEP 0 - SET VARIABLES
