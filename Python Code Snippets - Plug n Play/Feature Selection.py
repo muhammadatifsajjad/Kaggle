@@ -3,6 +3,12 @@ import pandas as pd
 import xgboost as xgb
 import operator
 
+# Performs feature selection using three methods:
+#	Method 1: Get candidate features to be removed with high inter-predictor 
+#				correlation above a user-defined threshold
+#	Method 2: Get candidate features to be removed havig least correlation with the target
+#	Method 3: Get feature importance from XGBoost to decide on candidate features to remove
+
 # -----------------------------------------------------------------------------
 # 						   		STEP 0 - SET VARIABLES
 # -----------------------------------------------------------------------------
@@ -16,8 +22,8 @@ xgboost_feat_imp_file_path = '../Data/feat_imp.csv'
 rem_cols = ['air_store_id', 'visit_date', 'air_genre_name_mod', 'air_area_name_mod']
 # Set thresold value for inter predictor correlation
 inter_predictor_corr_thresh = 0.95
-# Set thresold value for predictor correlation with the target
-inter_corr_with_tgt_feat_thresh = 1
+# Set number of features to remove for method 2
+num_feat_to_rem = 1
 # Set parameters for XGBoost 
 num_rounds = 10
 params = {'eta': 0.01, 'max_depth': 18, 'colsample_bytree': 0.2, 'subsample': 0.8, 
@@ -32,7 +38,7 @@ train = pd.read_csv(train_file_path)
 train = train.drop(rem_cols, axis=1)
 
 # -----------------------------------------------------------------------------
-# 		STEP 2 - GET FEATURES WITH INTER-PREDICTOR CORRELATION >= THRESHOLD
+# 		METHOD 1 - GET FEATURES WITH INTER-PREDICTOR CORRELATION >= THRESHOLD
 # -----------------------------------------------------------------------------
 def get_high_inter_predictor_corr_feat(data, target_col, threshold):   
     # Compute correlation matrix
@@ -60,7 +66,7 @@ high_inter_predictor_corr_feat = get_high_inter_predictor_corr_feat(train, \
 									target_column, inter_predictor_corr_thresh)
 
 # ------------------------------------------------------------------------------
-# 		STEP 3 - GET FEATURES HAVING LEAST CORRELATION WITH TARGET
+# 		METHOD 2 - GET FEATURES HAVING LEAST CORRELATION WITH TARGET
 # ------------------------------------------------------------------------------
 def rem_least_corr_with_target(data, target_col, num_feat):   
     # Compute correlation matrix
@@ -72,10 +78,10 @@ def rem_least_corr_with_target(data, target_col, num_feat):
     return final_cols
 
 least_corr_with_target_feat = rem_least_corr_with_target(train, target_column, \
-												inter_corr_with_tgt_feat_thresh)
+												num_feat_to_rem)
 
 # -------------------------------------------------------------------------------
-# 			STEP 4 - GET FEATURE IMPORTANCE FROM XGBOOST MODEL
+# 			METHOD 3 - GET FEATURE IMPORTANCE FROM XGBOOST MODEL
 # -------------------------------------------------------------------------------
 def ceate_feature_map(features):
     outfile = open('xgb.fmap', 'w')
