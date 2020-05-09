@@ -15,6 +15,7 @@
 
 (5) Following pre-processing steps can be performed:
     - Remove outliers based on inter-quartile range
+	- One-hot encoding
     
     If any of the above pre-processing steps need to be excluded, set it to 'False' in Step 0
 '''
@@ -38,15 +39,20 @@ root_directory = 'C:\\GoogleDrive(UniMelb)\\Kaggle Competitions\\Recruit Restaur
 preprocessing_files_list = ['train.csv']
 
 # Specify preprocessing steps to be performed
-remove_outlier = True
+remove_outlier     = True
+log_transformation = True
 
 ### Variables for outlier removal
-outlier_file_list = ['train'] # Comma separated list of data file names (without extension) from which outliers need to be removed
-outlier_column = 'visitors' # Name of the column which should be used to compute quartile range
-lower_quartile = 25 # Any value in [0,100]. For computing quartile range
-upper_quartile = 75 # Any value in [0,100]. For computing quartile range. Upper quartile should be higher than lower quartile
-amplifier = 2 # In case quartile range needs to be amplified, else set to 1
-keep_zero = True # If zero values are outside QR, do you still want to keep it?
+outlier_file_list  = ['train']    # Comma separated list of data file names (without extension) from which outliers need to be removed
+outlier_column     = 'visitors'   # Name of the column which should be used to compute quartile range. Should be numeric.
+lower_quartile     = 25           # Any value in [0,100]. For computing quartile range
+upper_quartile     = 75           # Any value in [0,100]. For computing quartile range. Upper quartile should be higher than lower quartile
+amplifier          = 2            # In case quartile range needs to be amplified, else set to 1
+keep_zero          = True         # If zero values are outside QR, do you still want to keep it?
+
+### Variables for log transformation
+log_file_list      = ['train']    # Comma separated list of data file names (without extension) requiring log transformation
+log_columns        = ['visitors'] # Comma separated list columns on which log transformation needs to be done. Should be numeric.
 
 # -------------------------------------------------------------------------------------------------------------------------------------
 # 							STEP 1 - READ DATA FILES
@@ -75,8 +81,8 @@ def remove_outliers(data, outlier_column, k, keep_zero, lower_quartile, upper_qu
     k * quartile_range where k is a tuning parameter
     
     Parameter description:            
-        (1) outlier_data_file - Name of the data file (without extension) from which outlier needs to be removed
-        (2) outlier_column - Name of the column which should be used to compute quartile range (QR)
+        (1) data - Dataframe from which outliers need to be removed
+        (2) outlier_column - Name of the numeric column which should be used to compute quartile range (QR)
         (3) k - In case QR needs to be amplified by a factor of k
         (4) keep_zero - If zero values are outside QR, do you still want to keep it?
 		(5) lower_quartile - Any value in [0,100]. For computing quartile range
@@ -84,21 +90,41 @@ def remove_outliers(data, outlier_column, k, keep_zero, lower_quartile, upper_qu
     '''      
     # Compute quartile range
     q1 = np.percentile(data[outlier_column], lower_quartile, axis=0)
-    q3 = np.percentile(data[outlier_column], upper_quuartile, axis=0)
+    q3 = np.percentile(data[outlier_column], upper_quartile, axis=0)
     qr = q3 - q1                               
     
     # Remove outliers
     lower_limit = q1 - amplifier*qr
     upper_limit = q3 + amplifier*qr
-    df_qr_range = data.loc[data[outlier_column] > lower_limit]
-    df_qr_range = df_qr_range.loc[df_qr_range[outlier_column] < q3 + k*qr]
+    df_qr_range = data[(data[outlier_column] > lower_limit) & (data[outlier_column] < upper_limit)]
 
     if keep_zero==True and not (lower_limit < 0 < upper_limit):
         df_0 = data.loc[data[outlier_column] == 0]       
         return pd.concat([df_0, df_qr_range])
     
     return df_qr_range
+
+def log_transform(data, columns):
+	'''
+	Logarithmic transformation of numeric column. Columns must have all positive
+    values because log is undefined for negative values. Alternatively, perform
+    standardizing before applying log transform to column with negative values.
     
+    Benefits:
+        (1) It helps to handle skewed data and after transformation, the distribution becomes more approximate to normal.
+        (2) In most of the cases the magnitude order of the data changes within the range of the data. For instance, the difference between ages 15 and 20 is not equal to the ages 65 and 70. In terms of years, yes, they are identical, but for all other aspects, 5 years of difference in young ages mean a higher magnitude difference. This type of data comes from a multiplicative process and log transform normalizes the magnitude differences like that.
+        (3) It also decreases the effect of the outliers, due to the normalization of magnitude differences and the model become more robust.
+   
+    Parameter description:
+        (1) data - Dataframe for which column(s) need to be log transformed
+        (2) columns - List of numeric column(s) to log transform
+	'''
+    
+	for col in columns:
+		data[col] = np.log1p(data[col])
+		
+	return data
+
 # -------------------------------------------------------------------------------------------------------------------------------------
 # 						STEP 3 - EXECUTE PRE-PROCESSING
 # -------------------------------------------------------------------------------------------------------------------------------------
@@ -108,6 +134,11 @@ if remove_outlier == True:
     for file in outlier_file_list:
         data[file] = remove_outliers(data[file], outlier_column, amplifier, keep_zero, lower_quartile, upper_quartile)
 
+if log_transformation == True:
+    print('Log Transformation ...')
+    for file in log_file_list:
+        data[file] = log_transform(data[file], log_columns)
+		
 del file
 
 # -------------------------------------------------------------------------------------------------------------------------------------
@@ -118,8 +149,7 @@ print('Saving preprocessed files ...')
 for key in data:
     data[key].to_csv(data_folder + '\\' + key + '-preprocessed.csv', index=False)
 
-del key, amplifier, keep_zero, outlier_column, outlier_file_list, preprocessing_files_list, remove_outlier
-
+del key, amplifier, keep_zero, outlier_column, outlier_file_list, preprocessing_files_list, remove_outlier, log_transformation, log_columns, log_file_list
 
 
 
